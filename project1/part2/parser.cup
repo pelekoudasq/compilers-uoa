@@ -1,0 +1,66 @@
+/* Simple +/-/* expression language; parser evaluates constant expressions on the fly*/
+/**
+ *  Package and Import Specifications
+ */
+import java_cup.runtime.*;
+
+/**
+ *  Usercode Components
+ */
+parser code {:
+    // Connect this parser to a scanner!
+    Scanner s;
+    Parser(Scanner s){ this.s=s; }
+:}
+
+/* define how to connect to the scanner! */
+scan with {: return s.next_token(); :};
+
+/**
+ *  Symbol Lists
+ */
+
+/* Terminals (tokens returned by the scanner). */
+terminal            PLUS, LPAREN, RPAREN, LBRACKET, RBRACKET, /*COMMA,*/ IF, ELSE, PREFIX, SUFFIX;
+terminal Integer    TOKEN, STRING_LITERAL;        // our scanner provides numbers as integers
+
+/*  Non terminals */
+non terminal            goal, function, maincall_list, maincall, parameters, decleration, args, implementation, statement, stmnt, ifstmnt;
+
+/**
+ *  Precedence Declarations
+//  */
+// precedence left PLUS, MINUS;
+// precedence left TIMES;
+// precedence left UMINUS;
+
+/**
+ *  The Grammar Rules
+ */
+goal            ::= function:f maincall_list:c {: System.out.println("public class Main {\n\tpublic static void main(String[] args) {"+c+"}");:}
+;
+
+function        ::= {: :}
+;
+
+maincall_list   ::= maincall_list:mcl maincall:mc {: RESULT = mcl + "\n\t" + mc :}
+;
+
+maincall        ::= {: System.out.println("\tSystem.out.println("+c+")"); :}
+;
+
+parameters      ::= STRING_LITERAL:str {: RESULT = "\""+str+"\""; :}
+                  | maincall:c
+;
+
+decleration     ::= TOKEN LPAREN args RPAREN
+;
+
+args            ::= {: :}
+;
+
+implementation  ::= LBRACKET stmnt RBRACKET
+;
+
+ifstmnt         ::= IF LPAREN stmnt RPAREN stmnt ELSE stmnt
+;
