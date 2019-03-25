@@ -21,11 +21,12 @@ scan with {: return s.next_token(); :};
  */
 
 /* Terminals (tokens returned by the scanner). */
-terminal            PLUS, LPAREN, RPAREN, LBRACKET, RBRACKET, /*COMMA,*/ IF, ELSE, PREFIX, SUFFIX;
-terminal Integer    TOKEN, STRING_LITERAL;        // our scanner provides numbers as integers
+terminal            /*PLUS,*/ LPAREN, RPAREN, /*LBRACKET, RBRACKET, COMMA,*/ IF, ELSE, PREFIX, SUFFIX;
+terminal String    TOKEN, STRING_LITERAL;        // our scanner provides numbers as integers
 
 /*  Non terminals */
-non terminal            goal, function, maincall_list, maincall, parameters, decleration, args, implementation, statement, stmnt, ifstmnt;
+non terminal        program;
+non terminal        string, stmnt, condition, ifstmnt;
 
 /**
  *  Precedence Declarations
@@ -37,7 +38,7 @@ non terminal            goal, function, maincall_list, maincall, parameters, dec
 /**
  *  The Grammar Rules
  */
-goal            ::= function:f maincall_list:c {: System.out.println("public class Main {\n\tpublic static void main(String[] args) {"+c+"}");:}
+/*goal            ::= function:f maincall_list:c {: System.out.println("public class Main {\n\tpublic static void main(String[] args) {"+c+"}");:}
 ;
 
 function        ::= {: :}
@@ -60,7 +61,23 @@ args            ::= {: :}
 ;
 
 implementation  ::= LBRACKET stmnt RBRACKET
+;*/
+program         ::= ifstmnt:ifst {: System.out.println("public class Main {\n\tpublic static void main(String[] args) {\n\t\treturn "+ifst+";\n\t}\n}"); :}
 ;
 
-ifstmnt         ::= IF LPAREN stmnt RPAREN stmnt ELSE stmnt
+// /function        ::= header:h implementation:im {:  :}
+
+ifstmnt         ::= IF LPAREN string:s1 condition:c RPAREN stmnt:st1 ELSE stmnt:st2 {: RESULT = ""+c+s1+") ? ("+st1+") : ("+st2+")"; :}
+;
+
+condition       ::= PREFIX string:s2 {: RESULT = "("+s2+")"+".startsWith("; :}
+                  | SUFFIX string:s2 {: RESULT = "("+s2+")"+".endsWith("; :}
+;
+
+stmnt           ::= ifstmnt:ifs {: RESULT = ifs; :}
+                  | string:s {: RESULT = s; :}
+;
+
+string          ::= STRING_LITERAL:str {: RESULT = "\""+str+"\""; :}
+                  | TOKEN:t {: RESULT = t; :}
 ;

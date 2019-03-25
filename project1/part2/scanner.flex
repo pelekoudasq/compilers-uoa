@@ -33,7 +33,7 @@ import java_cup.runtime.*;
 */
 
 %{
-    StringBuffer stringBuffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     /**
         The following two methods create java_cup.runtime.Symbol objects
     **/
@@ -66,19 +66,20 @@ Token          = [A-Za-z][A-Za-z0-9]*
    or just a zero.  */
 
 %state STRING
+%state ESCAPE
 
 %%
 /* ------------------------Lexical Rules Section---------------------- */
 
 <YYINITIAL> {
 /* operators */
-  "+"              { return symbol(sym.PLUS); }                        //concatenation operator
+//  "+"              { return symbol(sym.PLUS); }                        //concatenation operator
   "("              { return symbol(sym.LPAREN); }                      //open parenthesis
   ")"              { return symbol(sym.RPAREN); }                      //close parenthesis
-  "\""             { stringBuffer.setLength(0); yybegin(STRING); }     //string
-  "{"              { return symbol(sym.LBRACKET); }                    //open bracket
-  "}"              { return symbol(sym.RBRACKET); }                    //close bracket
-  ","              { return symbol(sym.COMMA); }                       //comma
+  "\""             { buffer.setLength(0); yybegin(STRING); }     //string
+//  "{"              { return symbol(sym.LBRACKET); }                    //open bracket
+//  "}"              { return symbol(sym.RBRACKET); }                    //close bracket
+//  ","              { return symbol(sym.COMMA); }                       //comma
   "if"             { return symbol(sym.IF); }                          //if keyword
   "else"           { return symbol(sym.ELSE); }                        //else keyword
   "prefix"         { return symbol(sym.PREFIX); }                      //prefix keyword
@@ -88,13 +89,20 @@ Token          = [A-Za-z][A-Za-z0-9]*
 }
 
 <STRING> {
-  "\""                             { yybegin(YYINITIAL); return symbol(sym.STRING_LITERAL, stringBuffer.toString()); }
-  "[^\n\r\"\\]+"                   { stringBuffer.append( yytext() ); }
-  "\\t"                            { stringBuffer.append('\t'); }
-  "\\n"                            { stringBuffer.append('\n'); }
-  "\\r"                            { stringBuffer.append('\r'); }
-  "\\\""                           { stringBuffer.append('\"'); }
-  "\\"                             { stringBuffer.append('\\'); }
+  "\""             { yybegin(YYINITIAL); return symbol(sym.STRING_LITERAL, buffer.toString()); }
+  "\\"             { yybegin(ESCAPE); buffer.append("\\"); }
+  [^'\"''\\']+     { buffer.append(yytext()); }
+}
+
+<ESCAPE> {
+  "\""            { yybegin(STRING); buffer.append("\""); }
+  "\\"            { yybegin(STRING); buffer.append("\\"); }
+  "n"             { yybegin(STRING); buffer.append("n"); }
+  "r"             { yybegin(STRING); buffer.append("r"); }
+  "t"             { yybegin(STRING); buffer.append("t"); }
+  "b"             { yybegin(STRING); buffer.append("b"); }
+  "f"             { yybegin(STRING); buffer.append("f"); }
+  "0"             { yybegin(STRING); buffer.append("0"); }
 }
 
 /* No token was found for the input so through an error.  Print out an
