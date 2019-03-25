@@ -2,6 +2,6 @@ if ("Java" prefix "Javascript")
     if ("script" suffix "Javascript")
         "yess"
     else
-        "no 2"
+        "no2"
 else
     "no 1"

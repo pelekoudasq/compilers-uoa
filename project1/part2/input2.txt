@@ -1,0 +1,17 @@
+name() {
+    "John"
+}
+
+repeat(x) {
+    x + x
+}
+
+cond_repeat(c, x) {
+    if (c prefix "yes")
+        if("yes" prefix c)
+            ff
+        else
+            x
+    else
+        x
+}

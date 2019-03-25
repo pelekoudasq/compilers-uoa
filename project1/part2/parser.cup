@@ -21,12 +21,12 @@ scan with {: return s.next_token(); :};
  */
 
 /* Terminals (tokens returned by the scanner). */
-terminal            /*PLUS,*/ LPAREN, RPAREN, /*LBRACKET, RBRACKET, COMMA,*/ IF, ELSE, PREFIX, SUFFIX;
+terminal           PLUS, LPAREN, RPAREN, LBRACKET, RBRACKET, COMMA, IF, ELSE, PREFIX, SUFFIX;
 terminal String    TOKEN, STRING_LITERAL;        // our scanner provides numbers as integers
 
 /*  Non terminals */
 non terminal        program;
-non terminal        string, stmnt, condition, ifstmnt;
+non terminal        function, header, arguements, comma_args, implementation, str_concatenation, body, string, stmnt, condition, ifstmnt;
 
 /**
  *  Precedence Declarations
@@ -38,34 +38,38 @@ non terminal        string, stmnt, condition, ifstmnt;
 /**
  *  The Grammar Rules
  */
-/*goal            ::= function:f maincall_list:c {: System.out.println("public class Main {\n\tpublic static void main(String[] args) {"+c+"}");:}
+
+program             ::= function:fs {: System.out.println("public class Main {\n\t"+fs+"\n\tpublic static void main(String[] args) {\n\t\treturn \"yes\";\n\t}\n}"); :}
 ;
 
-function        ::= {: :}
+function            ::= header:h implementation:im function:f{: RESULT = ""+h+im+"\n\t"+f; :}
+                      | {: RESULT = ""; :}
 ;
 
-maincall_list   ::= maincall_list:mcl maincall:mc {: RESULT = mcl + "\n\t" + mc :}
+header              ::= TOKEN:t LPAREN arguements:args RPAREN {: RESULT = ""+t+"("+args+")"; :}
 ;
 
-maincall        ::= {: System.out.println("\tSystem.out.println("+c+")"); :}
+arguements          ::= string:s comma_args:ca {: RESULT = ""+s+ca; :}
+                      | {: RESULT = ""; :}
 ;
 
-parameters      ::= STRING_LITERAL:str {: RESULT = "\""+str+"\""; :}
-                  | maincall:c
+comma_args          ::= COMMA string:s comma_args:ca {: RESULT = ", "+s+ca; :}
+                      | {: RESULT = ""; :}
 ;
 
-decleration     ::= TOKEN LPAREN args RPAREN
+implementation      ::= LBRACKET body:b RBRACKET {: RESULT = "{\n\t\treturn "+b+";\n\t}\n"; :}
 ;
 
-args            ::= {: :}
+body                ::= ifstmnt:ifs {: RESULT = ifs; :}
+                      | string:s str_concatenation:conc {: RESULT = ""+s+conc; :}
 ;
 
-implementation  ::= LBRACKET stmnt RBRACKET
-;*/
-program         ::= ifstmnt:ifst {: System.out.println("public class Main {\n\tpublic static void main(String[] args) {\n\t\treturn "+ifst+";\n\t}\n}"); :}
+str_concatenation   ::= PLUS string:s str_concatenation:c {: RESULT = "+"+s+c; :}
+                      | {: RESULT = ""; :}
 ;
 
-// /function        ::= header:h implementation:im {:  :}
+
+/**********************************************************************************/
 
 ifstmnt         ::= IF LPAREN string:s1 condition:c RPAREN stmnt:st1 ELSE stmnt:st2 {: RESULT = ""+c+s1+") ? ("+st1+") : ("+st2+")"; :}
 ;

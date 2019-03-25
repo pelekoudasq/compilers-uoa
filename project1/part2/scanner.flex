@@ -59,7 +59,7 @@ LineTerminator = \r|\n|\r\n
 /* White space is a line terminator, space, tab, or line feed. */
 WhiteSpace     = {LineTerminator} | [ \t\f]
 
-Token          = [A-Za-z][A-Za-z0-9]*
+Token          = [_A-Za-z][_A-Za-z0-9]*
 
 /* A literal integer is is a number beginning with a number between
    one and nine followed by zero or more numbers between zero and nine
@@ -73,13 +73,13 @@ Token          = [A-Za-z][A-Za-z0-9]*
 
 <YYINITIAL> {
 /* operators */
-//  "+"              { return symbol(sym.PLUS); }                        //concatenation operator
+  "+"              { return symbol(sym.PLUS); }                        //concatenation operator
   "("              { return symbol(sym.LPAREN); }                      //open parenthesis
   ")"              { return symbol(sym.RPAREN); }                      //close parenthesis
   "\""             { buffer.setLength(0); yybegin(STRING); }     //string
-//  "{"              { return symbol(sym.LBRACKET); }                    //open bracket
-//  "}"              { return symbol(sym.RBRACKET); }                    //close bracket
-//  ","              { return symbol(sym.COMMA); }                       //comma
+  "{"              { return symbol(sym.LBRACKET); }                    //open bracket
+  "}"              { return symbol(sym.RBRACKET); }                    //close bracket
+  ","              { return symbol(sym.COMMA); }                       //comma
   "if"             { return symbol(sym.IF); }                          //if keyword
   "else"           { return symbol(sym.ELSE); }                        //else keyword
   "prefix"         { return symbol(sym.PREFIX); }                      //prefix keyword
