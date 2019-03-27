@@ -77,15 +77,15 @@ Token          = [_A-Za-z][_A-Za-z0-9]*
   "("              { return symbol(sym.LPAREN); }                      //open parenthesis
   ")"              { return symbol(sym.RPAREN); }                      //close parenthesis
   "\""             { buffer.setLength(0); yybegin(STRING); }     //string
-  "{"              { return symbol(sym.LBRACKET); }                    //open bracket
-  "}"              { return symbol(sym.RBRACKET); }                    //close bracket
+  "{"              { return symbol(sym.LCURLY); }                    //open bracket
+  "}"              { return symbol(sym.RCURLY); }                    //close bracket
   ","              { return symbol(sym.COMMA); }                       //comma
   "if"             { return symbol(sym.IF); }                          //if keyword
   "else"           { return symbol(sym.ELSE); }                        //else keyword
   "prefix"         { return symbol(sym.PREFIX); }                      //prefix keyword
   "suffix"         { return symbol(sym.SUFFIX); }                      //suffix keyword
   {WhiteSpace}     { /* just skip what was found, do nothing */ }
-  {Token}          { return symbol(sym.TOKEN, new String(yytext())); }
+  {Token}          { return symbol(sym.IDENTIF, new String(yytext())); }
 }
 
 <STRING> {
