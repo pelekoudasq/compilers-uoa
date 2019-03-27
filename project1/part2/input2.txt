@@ -9,9 +9,12 @@ repeat(x) {
 cond_repeat(c, x) {
     if (c prefix "yes")
         if("yes" prefix c)
-            ff
+            f
         else
             x
     else
         x
 }
+
+cond_repeat("yes", ddd)
+cond_repeat("no", "Jane")

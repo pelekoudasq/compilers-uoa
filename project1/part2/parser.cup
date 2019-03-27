@@ -26,7 +26,7 @@ terminal String    TOKEN, STRING_LITERAL;        // our scanner provides numbers
 
 /*  Non terminals */
 non terminal        program;
-non terminal        function, header, arguements, comma_args, implementation, str_concatenation, body, string, stmnt, condition, ifstmnt;
+non terminal        calls, function, header_c, header, arguements_c, comma_args_c, arguements, comma_args, implementation, str_concatenation, body, string, stmnt, condition, ifstmnt;
 
 /**
  *  Precedence Declarations
@@ -39,25 +39,40 @@ non terminal        function, header, arguements, comma_args, implementation, st
  *  The Grammar Rules
  */
 
-program             ::= function:fs {: System.out.println("public class Main {\n\t"+fs+"\n\tpublic static void main(String[] args) {\n\t\treturn \"yes\";\n\t}\n}"); :}
+program             ::= function:fs calls:c {: System.out.println("public class Main {\n\t"+fs+"\n\tpublic static void main(String[] args) {\n\t\treturn "+ c +";\n\t}\n}"); :}
 ;
 
-function            ::= header:h implementation:im function:f{: RESULT = ""+h+im+"\n\t"+f; :}
+calls               ::= header_c:h calls:c {: RESULT = ""+h+"\n\t\t"+c; :}
                       | {: RESULT = ""; :}
+;
+
+function            ::= function:f header:h LBRACKET implementation:im {: RESULT = ""+h+im+"\n\t"+f; :}
+                      | {: RESULT = ""; :}
+;
+
+header_c            ::= TOKEN:t LPAREN arguements_c:args RPAREN {: RESULT = ""+t+"("+args+")"; :}
 ;
 
 header              ::= TOKEN:t LPAREN arguements:args RPAREN {: RESULT = ""+t+"("+args+")"; :}
 ;
 
-arguements          ::= string:s comma_args:ca {: RESULT = ""+s+ca; :}
+arguements_c        ::= string:s str_concatenation:conc comma_args_c:ca {: RESULT = ""+s+conc+ca; :}
                       | {: RESULT = ""; :}
 ;
 
-comma_args          ::= COMMA string:s comma_args:ca {: RESULT = ", "+s+ca; :}
+comma_args_c        ::= COMMA string:s str_concatenation:conc comma_args:ca {: RESULT = ", "+s+conc+ca; :}
                       | {: RESULT = ""; :}
 ;
 
-implementation      ::= LBRACKET body:b RBRACKET {: RESULT = "{\n\t\treturn "+b+";\n\t}\n"; :}
+arguements          ::= string:s str_concatenation:conc comma_args:ca {: RESULT = "String "+s+conc+ca; :}
+                      | {: RESULT = ""; :}
+;
+
+comma_args          ::= COMMA string:s str_concatenation:conc comma_args:ca {: RESULT = ", String "+s+conc+ca; :}
+                      | {: RESULT = ""; :}
+;
+
+implementation      ::= body:b RBRACKET {: RESULT = "{\n\t\treturn "+b+";\n\t}\n"; :}
 ;
 
 body                ::= ifstmnt:ifs {: RESULT = ifs; :}
