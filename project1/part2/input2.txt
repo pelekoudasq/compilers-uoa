@@ -1,20 +1,19 @@
-name() {
-    "John"
-}
-
-repeat(x) {
-    x + x
-}
-
-cond_repeat(c, x) {
-    if (c prefix "yes")
-        if("yes" prefix c)
-            f
+findLangType(langName) {
+        if ("Java" prefix langName)
+            if(langName prefix "Java")
+                "Static"
+            else
+                if("script" suffix langName)
+                    "Dynamic"
+                else
+                    "Unknown"
         else
-            x
-    else
-        x
-}
+            if ("script" suffix langName)
+                "Probably Dynamic"
+            else
+                "Unknown"
+    }
 
-cond_repeat("yes", ddd)
-cond_repeat("no", "Jane")
+    findLangType("Java")
+    findLangType("Javascript")
+    findLangType("Typescript")
