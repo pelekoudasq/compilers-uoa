@@ -61,6 +61,8 @@ WhiteSpace     = {LineTerminator} | [ \t\f]
 
 Token          = [_A-Za-z][_A-Za-z0-9]*
 
+Hack           = [)]{WhiteSpace}*[{]
+
 /* A literal integer is is a number beginning with a number between
    one and nine followed by zero or more numbers between zero and nine
    or just a zero.  */
@@ -77,13 +79,14 @@ Token          = [_A-Za-z][_A-Za-z0-9]*
   "("              { return symbol(sym.LPAREN); }                      //open parenthesis
   ")"              { return symbol(sym.RPAREN); }                      //close parenthesis
   "\""             { buffer.setLength(0); yybegin(STRING); }     //string
-  "{"              { return symbol(sym.LCURLY); }                    //open bracket
+//"{"              { return symbol(sym.LCURLY); }                    //open bracket
   "}"              { return symbol(sym.RCURLY); }                    //close bracket
   ","              { return symbol(sym.COMMA); }                       //comma
   "if"             { return symbol(sym.IF); }                          //if keyword
   "else"           { return symbol(sym.ELSE); }                        //else keyword
   "prefix"         { return symbol(sym.PREFIX); }                      //prefix keyword
   "suffix"         { return symbol(sym.SUFFIX); }                      //suffix keyword
+  {Hack}           { return symbol(sym.HACK); }
   {WhiteSpace}     { /* just skip what was found, do nothing */ }
   {Token}          { return symbol(sym.IDENTIF, new String(yytext())); }
 }
@@ -107,4 +110,4 @@ Token          = [_A-Za-z][_A-Za-z0-9]*
 
 /* No token was found for the input so through an error.  Print out an
    Illegal character message with the illegal character that was found. */
-[^]                    { throw new Error("Illegal character <"+yytext()+">"); }
+[^]               { throw new Error("Illegal character <"+yytext()+">"); }

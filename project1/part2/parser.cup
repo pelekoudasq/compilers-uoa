@@ -21,12 +21,12 @@ scan with {: return s.next_token(); :};
  */
 
 /* Terminals (tokens returned by the scanner). */
-terminal           PLUS, LPAREN, RPAREN, LCURLY, RCURLY, COMMA, IF, ELSE, PREFIX, SUFFIX;
+terminal           PLUS, LPAREN, RPAREN, /*LCURLY, */RCURLY, COMMA, IF, ELSE, PREFIX, SUFFIX, HACK;
 terminal String    IDENTIF, STRING_LITERAL;        // our scanner provides numbers as integers
 
 /*  Non terminals */
 non terminal        program;
-non terminal        middle_state, call, function, arguements_c, comma_args_c, arguements, comma_args, implementation, call_list, body, str_call, str_declaration, string, str_concatenation, str_concatenation_call, stmnt, condition, ifstmnt;
+non terminal        str_conc_inner_call, inner_call, inner_args, inner_comma_args, call, function, arguements_c, comma_args_c, arguements, comma_args, implementation, call_list, body, str_call, str_declaration, string, str_concatenation_call, stmnt, condition, ifstmnt;
 
 /**
  *  Precedence Declarations
@@ -40,11 +40,8 @@ precedence left PLUS;
 program                     ::= function:fs call_list:cl {: System.out.println("public class Main {\n\n\tpublic static void main(String[] args) {\n\t\t"+cl+"\n\t}\n\n\t"+fs+"\n}"); :}
 ;
 
-function                    ::= function:f IDENTIF:t LPAREN arguements:args middle_state:md implementation:im {: RESULT = "public static String "+t+"("+args+md+")"+im+"\n\t"+f; :}
+function                    ::= function:f IDENTIF:t LPAREN arguements:args HACK implementation:im {: RESULT = "public static String "+t+"("+args+")"+im+"\n\t"+f; :}
                               | {: RESULT = ""; :}
-;
-
-middle_state                ::= RPAREN LCURLY {: RESULT = ""; :}
 ;
 
 arguements                  ::= str_declaration:s comma_args:ca {: RESULT = "String "+s+ca; :}
@@ -77,6 +74,17 @@ comma_args_c                ::= COMMA str_call:s comma_args_c:ca {: RESULT = ", 
                               | {: RESULT = ""; :}
 ;
 
+inner_call                  ::= IDENTIF:t LPAREN inner_args:args {: RESULT = ""+t+"("+args+")"; :}
+;
+
+inner_args                  ::= string:s inner_comma_args:ca RPAREN {: RESULT = ""+s+ca; :}
+                              | RPAREN {: RESULT = ""; :}
+;
+
+inner_comma_args            ::= COMMA string:s inner_comma_args:ca {: RESULT = ", "+s+ca; :}
+                              | {: RESULT = ""; :}
+;
+
 /**********************************************************************************/
 
 ifstmnt                     ::= IF LPAREN string:s1 condition:c RPAREN stmnt:st1 ELSE stmnt:st2 {: RESULT = ""+c+s1+") ? ("+st1+") : ("+st2+")"; :}
@@ -90,11 +98,12 @@ stmnt                       ::= ifstmnt:ifs {: RESULT = ifs; :}
                               | string:s {: RESULT = s; :}
 ;
 
-string                      ::= str_call:sc {: RESULT = sc; :}
-                              | str_declaration:sd str_concatenation:sc {: RESULT = ""+sd+sc; :}
+string                      ::= STRING_LITERAL:str str_conc_inner_call:conc {: RESULT = "\""+str+"\""+conc; :}
+                              | inner_call:ic str_conc_inner_call:conc {: RESULT = ""+ic+conc; :}
+                              | str_declaration:sd str_conc_inner_call:conc {: RESULT = ""+sd+conc; :}
 ;
 
-str_concatenation           ::= PLUS str_declaration:sd str_concatenation:sc {: RESULT = "+"+sd+sc; :}
+str_conc_inner_call         ::= PLUS string:s {: RESULT = "+"+s; :}
                               | {: RESULT = ""; :}
 ;
 
