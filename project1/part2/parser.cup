@@ -55,8 +55,7 @@ comma_args                  ::= COMMA str_declaration:s comma_args:ca {: RESULT 
 implementation              ::= body:b RCURLY {: RESULT = "{\n\t\treturn "+b+";\n\t}\n"; :}
 ;
 
-body                        ::= ifstmnt:ifs {: RESULT = ifs; :}
-                              | string:s {: RESULT = ""+s; :}
+body                        ::= string:s {: RESULT = ""+s; :}
 ;
 
 call_list                   ::= call:c call_list:cl {: RESULT = "System.out.println("+c+");\n\t\t"+cl; :}
@@ -87,20 +86,21 @@ inner_comma_args            ::= COMMA string:s inner_comma_args:ca {: RESULT = "
 
 /**********************************************************************************/
 
-ifstmnt                     ::= IF LPAREN string:s1 condition:c RPAREN stmnt:st1 ELSE stmnt:st2 {: RESULT = ""+c+s1+") ? ("+st1+") : ("+st2+")"; :}
+ifstmnt                     ::= IF LPAREN string:s1 condition:c RPAREN string:st1 ELSE string:st2 {: RESULT = "("+c+s1+") ? ("+st1+") : ("+st2+"))"; :}
 ;
 
 condition                   ::= PREFIX string:s2 {: RESULT = "("+s2+")"+".startsWith("; :}
                               | SUFFIX string:s2 {: RESULT = "("+s2+")"+".endsWith("; :}
 ;
 
-stmnt                       ::= ifstmnt:ifs {: RESULT = ifs; :}
-                              | string:s {: RESULT = s; :}
-;
+// stmnt                       ::= ifstmnt:ifs {: RESULT = ifs; :}
+//                               | string:s {: RESULT = s; :}
+// ;
 
 string                      ::= STRING_LITERAL:str str_conc_inner_call:conc {: RESULT = "\""+str+"\""+conc; :}
                               | inner_call:ic str_conc_inner_call:conc {: RESULT = ""+ic+conc; :}
                               | str_declaration:sd str_conc_inner_call:conc {: RESULT = ""+sd+conc; :}
+                              | ifstmnt:ifs str_conc_inner_call:conc {: RESULT = ""+ifs+conc; :}
 ;
 
 str_conc_inner_call         ::= PLUS string:s {: RESULT = "+"+s; :}

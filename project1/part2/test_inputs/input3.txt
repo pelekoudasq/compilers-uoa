@@ -1,0 +1,39 @@
+name(x)  {
+    "John and " + x
+}
+
+laugh(x){
+    "Hahah " + name(x) + "!"
+}
+
+action(c, x) {
+    if (c prefix "yes")
+        if("yes" prefix c)
+            laugh(x)
+            +
+            if("Ha" prefix laugh(x))
+              "Stop"
+            else
+              "Please laugh"
+        else
+            x + "!"
+            +
+            if("ne" suffix laugh(name(x)))
+              "Stop"
+            else
+              "Please laugh"
+
+    else
+        x + "!"
+        +
+        if("ne" suffix name(x))
+          "Stop"
+        else
+          "Please laugh"
+}
+
+action("bar", name("My Parser"))
+action("yes", name(" "))
+action("yes", "Jane")
+action("no", "Jane")
+action("P", "mr.William")

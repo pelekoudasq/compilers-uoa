@@ -68,7 +68,6 @@ Hack           = [)]{WhiteSpace}*[{]
    or just a zero.  */
 
 %state STRING
-%state ESCAPE
 
 %%
 /* ------------------------Lexical Rules Section---------------------- */
@@ -78,9 +77,9 @@ Hack           = [)]{WhiteSpace}*[{]
   "+"              { return symbol(sym.PLUS); }                        //concatenation operator
   "("              { return symbol(sym.LPAREN); }                      //open parenthesis
   ")"              { return symbol(sym.RPAREN); }                      //close parenthesis
-  "\""             { buffer.setLength(0); yybegin(STRING); }     //string
-//"{"              { return symbol(sym.LCURLY); }                    //open bracket
-  "}"              { return symbol(sym.RCURLY); }                    //close bracket
+  "\""             { buffer.setLength(0); yybegin(STRING); }           //string
+//"{"              { return symbol(sym.LCURLY); }                      //open bracket
+  "}"              { return symbol(sym.RCURLY); }                      //close bracket
   ","              { return symbol(sym.COMMA); }                       //comma
   "if"             { return symbol(sym.IF); }                          //if keyword
   "else"           { return symbol(sym.ELSE); }                        //else keyword
@@ -92,20 +91,13 @@ Hack           = [)]{WhiteSpace}*[{]
 }
 
 <STRING> {
-  "\""             { yybegin(YYINITIAL); return symbol(sym.STRING_LITERAL, buffer.toString()); }
-  "\\"             { yybegin(ESCAPE); buffer.append("\\"); }
-  [^'\"''\\']+     { buffer.append(yytext()); }
-}
-
-<ESCAPE> {
-  "\""            { yybegin(STRING); buffer.append("\""); }
-  "\\"            { yybegin(STRING); buffer.append("\\"); }
-  "n"             { yybegin(STRING); buffer.append("n"); }
-  "r"             { yybegin(STRING); buffer.append("r"); }
-  "t"             { yybegin(STRING); buffer.append("t"); }
-  "b"             { yybegin(STRING); buffer.append("b"); }
-  "f"             { yybegin(STRING); buffer.append("f"); }
-  "0"             { yybegin(STRING); buffer.append("0"); }
+  \"                             { yybegin(YYINITIAL); return symbol(sym.STRING_LITERAL, buffer.toString()); }
+  [^\n\r\"\\]+                   { buffer.append( yytext() ); }
+  \\t                            { buffer.append("\\t"); }
+  \\n                            { buffer.append("\\n"); }
+  \\r                            { buffer.append("\\r"); }
+  \\\"                           { buffer.append("\""); }
+  \\                             { buffer.append("\\"); }
 }
 
 /* No token was found for the input so through an error.  Print out an
