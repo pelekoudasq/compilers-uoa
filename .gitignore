@@ -1,0 +1,10 @@
+project2/TokenMgrError.java
+project2/Token.java
+project2/ParseException.java
+project2/MiniJavaParserTokenManager.java
+project2/MiniJavaParserConstants.java
+project2/MiniJavaParser.java
+project2/minijava-jtb.jj
+project2/JavaCharStream.java
+project2/syntaxtree/*
+project2/visitor/*
