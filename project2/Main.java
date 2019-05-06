@@ -1,4 +1,7 @@
 import java.io.*;
+import components.*;
+import visitor.*;
+import syntaxtree.*;
 
 public class Main {
 
@@ -14,6 +17,12 @@ public class Main {
 			try {
 				fis = new FileInputStream(filename);
 				MiniJavaParser parser = new MiniJavaParser(fis);
+				Node root = parser.Goal();
+				SymbolTable st = new SymbolTable();
+				ClassVisitor cv = new ClassVisitor(st);
+				root.accept(cv);
+				FillClassVisitor fcv = new FillClassVisitor(st);
+				root.accept(fcv);
 				fis.close();
 			}
 			catch (Exception ex) {
