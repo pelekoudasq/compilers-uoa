@@ -1,3 +1,5 @@
+## Part 1 - Implementation of a LL(1) parser for a simple calculator
+
 For the first part of this homework you should implement a simple calculator. The calculator should accept expressions with the bitwise AND(&) and XOR(^) operators, as well as parentheses. The grammar (for single-digit numbers) is summarized in:
 exp -> num | exp op exp | (exp)
 op -> ^ | &
