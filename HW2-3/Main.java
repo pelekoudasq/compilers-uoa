@@ -18,14 +18,16 @@ public class Main {
 				fis = new FileInputStream(filename);
 				MiniJavaParser parser = new MiniJavaParser(fis);
 				Node root = parser.Goal();
-				SymbolTable st = new SymbolTable();
+				SymbolTable st = new SymbolTable(filename);
 				ClassVisitor cv = new ClassVisitor(st);
 				root.accept(cv);
 				FillClassVisitor fcv = new FillClassVisitor(st);
 				root.accept(fcv);
 				CheckVisitor ckv = new CheckVisitor(st);
 				root.accept(ckv);
-				st.printOffsets(filename);
+				LLVMVisitor llvm = new LLVMVisitor(st);
+				root.accept(llvm);
+				//st.printOffsets();
 				fis.close();
 			}
 			catch (Exception ex) {

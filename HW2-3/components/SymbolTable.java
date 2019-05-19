@@ -5,21 +5,22 @@ import java.util.*;
 public class SymbolTable {
 
 	public Map<String, Class> cls;
+	public String filename;
 
-	public SymbolTable() {
+	public SymbolTable(String filename) {
 		cls = new LinkedHashMap<>();
+		this.filename = filename.substring(filename.lastIndexOf("/") + 1);
+		this.filename = this.filename.substring(0, this.filename.indexOf("."));
 	}
 
 	public Class getClass(String className) {
 		return cls.get(className);
 	}
 
-	public void printOffsets(String filename) {
+	public void printOffsets() {
 		ArrayList<String> keys = new ArrayList<String>(cls.keySet());
-		filename = filename.substring(filename.lastIndexOf("/") + 1);
-		filename = filename.substring(0, filename.indexOf("."));
 		for(int i = 0; i < keys.size(); i++) {
-			if ( !filename.equals(keys.get(i)) )
+			if ( !this.filename.equals(keys.get(i)) )
 				cls.get(keys.get(i)).printOffsets();
 		}
 		System.out.println("");
