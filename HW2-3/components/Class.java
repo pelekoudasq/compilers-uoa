@@ -36,7 +36,9 @@ public class Class {
 		if ( tempMeth != null ) {
 			if ( !meth.getSignature().equals(tempMeth.getSignature()) )
 				return false;
-			return true;
+			meth.offset = tempMeth.offset;
+			meth.overriden = true;
+			//return true;
 		}
 		this.methods.add(meth);
 		return true;

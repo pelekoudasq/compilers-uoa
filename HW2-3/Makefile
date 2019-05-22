@@ -7,4 +7,4 @@ compile:
 	javac Main.java
 
 clean:
-	rm -f *.class *~ ./components/*.class
+	rm -f *.class *~ ./components/*.class *~ ./examples/*.class *~ *.ll

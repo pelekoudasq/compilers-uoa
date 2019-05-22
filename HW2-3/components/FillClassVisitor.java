@@ -112,7 +112,7 @@ public class FillClassVisitor extends GJNoArguDepthFirst<String> {
 			// System.out.println("Fill Class Visitor: Method '"  + name + "' declared for class '" + this.currentClass.name + "'");
 		}
 		Method temp = this.currentClass.getMeth(name, table, 1);
-		if ( temp != null ) {
+		if ( temp != null && temp.overriden == false ) {
 			this.currentMethod.offset = this.currentClass.methOffset;
 			this.currentClass.methOffset = this.currentClass.methOffset + offsetValueFromType("method");
 		}

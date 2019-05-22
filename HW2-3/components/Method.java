@@ -9,6 +9,7 @@ public class Method {
 	public List<Variable> params;
 	public List<Variable> vars;
 	public int offset;
+	public boolean overriden;
 
 	public Method(String type, String name) {
 		this.type = type;
@@ -16,6 +17,7 @@ public class Method {
 		this.params = new ArrayList<>();
 		this.vars = new ArrayList<>();
 		this.offset = 0;
+		this.overriden = false;
 	}
 
 	public boolean putParam(Variable newVar) {
