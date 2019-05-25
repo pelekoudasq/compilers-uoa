@@ -77,7 +77,11 @@ public class LLVMVisitor extends GJNoArguDepthFirst<String> {
 		return null;
 	}
 
+	/** * f1 -> Identifier() * f11 -> Identifier() * f14 -> ( VarDeclaration() )* * f15 -> ( Statement() )* */
 	public String visit(MainClass n) {
+		this.buffer = this.buffer + "define i32 @main() {\n";
+		n.f11.accept(this);
+		this.buffer = this.buffer + "}\n\n";
 		return null;
 	}
 
