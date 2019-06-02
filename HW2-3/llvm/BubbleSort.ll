@@ -87,21 +87,13 @@ define i32 @BBS.Start(i8* %this, i32 %.sz) {
 
 define i32 @BBS.Sort(i8* %this) {
 	%nt = alloca i32
-	
 	%i = alloca i32
-	
 	%aux02 = alloca i32
-	
 	%aux04 = alloca i32
-	
 	%aux05 = alloca i32
-	
 	%aux06 = alloca i32
-	
 	%aux07 = alloca i32
-	
 	%j = alloca i32
-	
 	%t = alloca i32
 	
 	%_0 = getelementptr i8, i8* %this, i32 16

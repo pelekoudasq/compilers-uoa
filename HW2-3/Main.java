@@ -25,9 +25,9 @@ public class Main {
 				root.accept(fcv);
 				CheckVisitor ckv = new CheckVisitor(st);
 				root.accept(ckv);
-				LLVMVisitor llvm = new LLVMVisitor(st);
-				root.accept(llvm);
 				//st.printOffsets();
+				LLVMVisitor llvm = new LLVMVisitor(st);
+				root.accept(llvm, null);
 				fis.close();
 			}
 			catch (Exception ex) {
