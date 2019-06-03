@@ -18,10 +18,11 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 	int registerCounter;
 	int ifLabelCounter;
 	int whileLabelCounter;
+	int oobLabelCounter;
+	int allocLabelCounter;
 	String loadedRegister;
 	String auxString;
 	String allocExprIdentifier;
-	boolean isThis;
 
 	public static boolean isNumeric(String strNum) {
 		try {
@@ -48,7 +49,6 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 	}
 
 	public LLVMVisitor(SymbolTable table) {
-		this.isThis = false;
 		this.allocExprIdentifier = "";
 		this.isBoolean = false;
 		this.auxString = "";
@@ -108,7 +108,10 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 		this.currentMethod = this.currentClass.getMeth("main", table, 0);
 		this.inMethod = true;
 		this.buffer = this.buffer + "define i32 @main() {\n";
-		n.f14.accept(this, argu);
+		//n.f14.accept(this, argu);
+		for (Variable varr : this.currentMethod.vars) {
+			this.buffer = this.buffer + "\t%" + varr.name + " = alloca " + typeJavaToLLVM(varr.type) + "\n";
+		}
 		n.f15.accept(this, argu);
 		this.buffer = this.buffer + "\tret i32 0\n";
 		this.buffer = this.buffer + "}\n\n";
@@ -142,10 +145,11 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 		this.registerCounter = 0;
 		this.ifLabelCounter = 0;
 		this.whileLabelCounter = 0;
+		this.oobLabelCounter = 0;
+		this.allocLabelCounter = 0;
 		String type = n.f1.accept(this, argu);
 		String name = n.f2.accept(this, argu);
 		this.currentMethod = this.currentClass.getMeth(name, table, 0);
-
 
 		this.buffer = this.buffer + "\ndefine " + typeJavaToLLVM(this.currentMethod.type) + " @" + this.currentClass.name + "." + this.currentMethod.name + "(i8* %this";
 		for (Variable param : this.currentMethod.params) {
@@ -174,14 +178,11 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 
 	/** * f1 -> "=" * f3 -> ";" * f0 -> Identifier() * f2 -> Expression() */ //done
 	public String visit(AssignmentStatement n, String argu) {
-		
-		//to be stored -> get bitcast aka address
-		String retReg = n.f0.accept(this, "load_var_1");
+		// System.out.println("in AssignmentStatement");
 		String id = n.f0.accept(this, argu);
 		Variable varr = this.currentMethod.getVar(id);
 		if (varr == null)
 			varr = this.currentClass.getVar(id, table);
-
 		//address to store to f0
 		String exprReg = n.f2.accept(this, "load_var");
 		if (!exprReg.startsWith("%") && !isNumeric(exprReg)) {
@@ -190,6 +191,9 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 			exprReg = "%_" + this.registerCounter;
 			this.registerCounter += 1;
 		}
+
+		//to be stored -> get bitcast aka address
+		String retReg = n.f0.accept(this, "load_var_1");
 		if (!retReg.startsWith("%")) {
 			retReg = "%" + retReg;
 		}
@@ -202,6 +206,14 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 	public String visit(ArrayAssignmentStatement n, String argu) {
 		//System.out.println("in ArrayAssignmentStatement");
 		String retReg = n.f0.accept(this, "load_var");
+		String size = retReg;
+		if (!isNumeric(retReg)) {
+			this.buffer = this.buffer + "\t%_" + this.registerCounter + " = load i32, i32* " + retReg + "\n";
+			//for out of bounds
+			size = "%_" + this.registerCounter;
+			this.registerCounter += 1;
+		}
+
 		String retExpr1 = n.f2.accept(this, argu);
 		if (!retExpr1.startsWith("%") && !isNumeric(retExpr1)) {
 			retExpr1 = "%" + retExpr1;
@@ -209,6 +221,22 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 			retExpr1 = "%_" + this.registerCounter;
 			this.registerCounter += 1;
 		}
+
+		this.buffer = this.buffer + "\t%_" + this.registerCounter + " = icmp ult i32 " + retExpr1 + ", " + size + "\n";
+		this.registerCounter += 1;		
+
+		this.oobLabelCounter += 3;
+		int oob_lbl1 = this.oobLabelCounter - 3;
+		int oob_lbl2 = this.oobLabelCounter - 2;
+		int oob_lbl3 = this.oobLabelCounter - 1;
+		
+		this.buffer = this.buffer + "\tbr i1 %_" + (this.registerCounter - 1) + ", label %oob" + oob_lbl1 + ", label %oob" + oob_lbl2 + "\n";
+		this.buffer = this.buffer + "oob" + oob_lbl1 + ":\n";
+		
+		this.registerCounter += 2;
+		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 2) + " = add i32 " + retExpr1 + ", 1\n";
+		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 1) + " = getelementptr i32, i32* " + retReg + ", i32 %_" + (this.registerCounter - 2) + "\n";
+		int c = this.registerCounter - 1;
 		String retExpr2 = n.f5.accept(this, argu);
 		if (!retExpr2.startsWith("%") && !isNumeric(retExpr2)) {
 			retExpr2 = "%" + retExpr2;
@@ -216,16 +244,20 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 			retExpr2 = "%_" + this.registerCounter;
 			this.registerCounter += 1;
 		}
-		this.registerCounter += 2;
-		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 2) + " = add i32 " + retExpr1 + ", 1\n";
-		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 1) + " = getelementptr i32, i32* " + retReg + ", i32 %_" + (this.registerCounter - 2) + "\n";
-		this.buffer = this.buffer + "\tstore i32 " + retExpr2 + ", i32* %_" + (this.registerCounter - 1) + "\n";
+		this.buffer = this.buffer + "\tstore i32 " + retExpr2 + ", i32* %_" + c + "\n";
+
+		this.buffer = this.buffer + "\tbr label %oob" + oob_lbl3 + "\n";
+		this.buffer = this.buffer + "oob" + oob_lbl2 + ":\n";
+		this.buffer = this.buffer + "\tcall void @throw_oob()\n";
+		this.buffer = this.buffer + "\tbr label %oob" + oob_lbl3 + "\n";
+		this.buffer = this.buffer + "oob" + oob_lbl3 + ":\n";
+		
 		return null;
 	}
 
 	/** * f0 -> "if" * f1 -> "(" * f2 -> Expression() * f3 -> ")" * f4 -> Statement() * f5 -> "else" * f6 -> Statement() */
 	public String visit(IfStatement n, String argu) {
-		//System.out.println("in IfStatement");
+		// System.out.println("in IfStatement");
 		this.ifLabelCounter += 3;
 		int if_lbl1 = this.ifLabelCounter - 3;
 		int if_lbl2 = this.ifLabelCounter - 2;
@@ -245,23 +277,25 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 
 	/** * f0 -> "while" * f1 -> "(" * f2 -> Expression() * f3 -> ")" * f4 -> Statement() */
 	public String visit(WhileStatement n, String argu) {
-		//System.out.println("in WhileStatement");
-		this.whileLabelCounter += 2;
-		this.buffer = this.buffer + "\tbr label %loop" + (this.whileLabelCounter - 2) + "\n";
-		this.buffer = this.buffer + "loop" + (this.whileLabelCounter - 2) + ":\n";
+		// System.out.println("in WhileStatement");
+		this.whileLabelCounter += 3;
+		int while_lbl1 = this.whileLabelCounter - 3;
+		int while_lbl2 = this.whileLabelCounter - 2;
+		int while_lbl3 = this.whileLabelCounter - 1;
+		this.buffer = this.buffer + "\tbr label %loop" + while_lbl1 + "\n";
+		this.buffer = this.buffer + "loop" + while_lbl1 + ":\n";
 		String retExpr = n.f2.accept(this, "load_var");
-		this.buffer = this.buffer + "\tbr i1 " + retExpr + ", label %loop" + (this.whileLabelCounter - 1) + ", label %loop" + (this.whileLabelCounter - 2) + "\n";
-		this.buffer = this.buffer + "loop" + (this.whileLabelCounter - 1) + ":\n";
+		this.buffer = this.buffer + "\tbr i1 " + retExpr + ", label %loop" + while_lbl2 + ", label %loop" + while_lbl3 + "\n";
+		this.buffer = this.buffer + "loop" + while_lbl2 + ":\n";
 		n.f4.accept(this, argu);
-		this.buffer = this.buffer + "\tbr label %loop" + this.whileLabelCounter + "\n";
-		this.buffer = this.buffer + "loop" + this.whileLabelCounter + ":\n";
-		this.whileLabelCounter += 1;
+		this.buffer = this.buffer + "\tbr label %loop" + while_lbl1 + "\n";
+		this.buffer = this.buffer + "loop" + while_lbl3 + ":\n";
 		return null;
 	}
 
 	/** * f0 -> "System.out.println" * f1 -> "(" * f2 -> Expression() * f3 -> ")" * f4 -> ";" */
 	public String visit(PrintStatement n, String argu) {
-		//System.out.println("in PrintStatement");
+		// System.out.println("in PrintStatement");
 		String retExpr = n.f2.accept(this, "load_var");
 		// if ( this.isBoolean == true ) {
 		// 	System.out.println("in isBoolean");
@@ -286,17 +320,24 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 	public String visit(AndExpression n, String argu) {
 		//this.buffer = this.buffer + "\n\t; AndExpression\n";
 		String clause1reg = n.f0.accept(this, "load_var");
+		this.ifLabelCounter += 4;
+		int if_lbl1 = this.ifLabelCounter - 4;
+		int if_lbl2 = this.ifLabelCounter - 3;
+		int if_lbl3 = this.ifLabelCounter - 2;
+		int if_lbl4 = this.ifLabelCounter - 1;
+
+		this.buffer = this.buffer + "\tbr label %and" + if_lbl1 + "\n";
+		this.buffer = this.buffer + "and" + if_lbl1 + ":\n";
+		this.buffer = this.buffer + "\tbr i1 " + clause1reg + ", label %and" +if_lbl2 + ", label %and" + if_lbl4 + "\n";
+		this.buffer = this.buffer + "and" +if_lbl2 + ":\n";
 		String clause2reg = n.f2.accept(this, "load_var");
-		this.registerCounter += 2;
-		this.ifLabelCounter += 3;
-		this.buffer = this.buffer + "\tbr i1 " + clause1reg + ", label %if" + (this.ifLabelCounter - 3) + ", label %if" + (this.ifLabelCounter - 2) + "\n";
-		this.buffer = this.buffer + "if" + (this.ifLabelCounter - 3) + ":\n";
-		this.buffer = this.buffer + "\tbr label %if" + (this.ifLabelCounter - 1) + "\n";
-		this.buffer = this.buffer + "if" + (this.ifLabelCounter - 2) + ":\n";
-		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 2) + " = icmp eq i1 " + clause1reg + ", 1\n";
-		this.buffer = this.buffer + "\tbr label %if" + (this.ifLabelCounter - 1) + "\n";
-		this.buffer = this.buffer + "if" + (this.ifLabelCounter - 1) + ":\n";
-		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 1) + " = phi i1 [" + clause2reg + ", %if" + (this.ifLabelCounter - 3) + "], [ %_" + (this.registerCounter - 2) + ", %if" + (this.ifLabelCounter - 2) + "]\n";
+		this.buffer = this.buffer + "\tbr label %and" + if_lbl3 + "\n";
+
+		this.buffer = this.buffer + "and" +if_lbl3 + ":\n";
+		this.buffer = this.buffer + "\tbr label %and" + if_lbl4 + "\n";
+		this.buffer = this.buffer + "and" + if_lbl4 + ":\n";
+		this.registerCounter += 2;		
+		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 1) + " = phi i1 [ 0, %and" + if_lbl1 + "], [ " + clause2reg + ", %and" + if_lbl3 + "]\n";
 		this.isBoolean = true;
 		return "%_" + (this.registerCounter - 1);
 	}
@@ -364,12 +405,14 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 	}
 
 	public String visit(ArrayLookup n, String argu) {
+		// System.out.println("in ArrayLookup");		
 		//this.buffer = this.buffer + "\n\t; ArrayLookup\n";
 		String expr1reg = n.f0.accept(this, "load_var");
+		String size = expr1reg;
 		if (!isNumeric(expr1reg)) {
 			this.buffer = this.buffer + "\t%_" + this.registerCounter + " = load i32, i32* " + expr1reg + "\n";
 			//for out of bounds
-			//expr1reg = "%_" + this.registerCounter;
+			size = "%_" + this.registerCounter;
 			this.registerCounter += 1;
 		}
 		String expr2reg = n.f2.accept(this, "load_var");
@@ -379,10 +422,28 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 			expr2reg = "%_" + this.registerCounter;
 			this.registerCounter += 1;
 		}
-		this.registerCounter += 3;
+
+		this.registerCounter += 4;
+		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 4) + " = icmp ult i32 " + expr2reg + ", " + size + "\n";
+
+		this.oobLabelCounter += 3;
+		int oob_lbl1 = this.oobLabelCounter - 3;
+		int oob_lbl2 = this.oobLabelCounter - 2;
+		int oob_lbl3 = this.oobLabelCounter - 1;
+
+		this.buffer = this.buffer + "\tbr i1 %_" + (this.registerCounter - 4) + ", label %oob"+ oob_lbl1 + ", label %oob" + oob_lbl2 + "\n";
+		this.buffer = this.buffer + "oob" + oob_lbl1 + ":\n";
+
 		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 3) + " = add i32 " + expr2reg + ", 1\n";
 		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 2) + " = getelementptr i32, i32* " + expr1reg + ", i32 %_" + (this.registerCounter - 3) + "\n";
 		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 1) + " = load i32, i32* %_" + (this.registerCounter - 2) + "\n";
+		this.buffer = this.buffer + "\tbr label %oob" + oob_lbl3 + "\n";
+
+		this.buffer = this.buffer + "oob" + oob_lbl2 + ":\n";
+		this.buffer = this.buffer + "\tcall void @throw_oob()\n";
+		this.buffer = this.buffer + "\tbr label %oob" + oob_lbl3 + "\n";
+		this.buffer = this.buffer + "oob" + oob_lbl3 + ":\n";
+		
 		this.isBoolean = false;
 		return "%_" + (this.registerCounter - 1);
 	}
@@ -397,25 +458,23 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 
 	/** * f1 -> "." * f3 -> "(" * f5 -> ")" * f0 -> PrimaryExpression() * f2 -> Identifier() * f4 -> ( ExpressionList() )? */
 	public String visit(MessageSend n, String argu) {
-		
+		// System.out.println("in MessageSend");	
 		String retReg =  n.f0.accept(this, "load_var");
 		String className = this.allocExprIdentifier;
-		Class classCalled;
+		Class classCalled = this.table.getClass(className);
 		Variable varIdent = this.currentMethod.getVar(className);
-		if (varIdent == null) {
+		if (varIdent == null)
 			varIdent = this.currentClass.getVar(className, table);
-			classCalled = this.table.getClass(className);
-			if (varIdent == null && classCalled == null) {
-				classCalled = this.currentClass;
-			}
+		if (varIdent == null) {
+			classCalled =  this.table.getClass(className);
+
 		} else {
 			classCalled = this.table.getClass(varIdent.type);
 		}
-
 		String methodName = n.f2.accept(this, null);
 
 		Method meth = classCalled.getMeth(methodName, table, 0);
-
+		
 		String[] argsSignature = meth.getSignature().split(",");
 		String argList = n.f4.accept(this, "load_var");
 		this.registerCounter += 6;
@@ -435,12 +494,8 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 
 		this.buffer = this.buffer + ")*\n";
 		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 1) + " = call " + typeJavaToLLVM(meth.type) + " %_" + (this.registerCounter - 2) + "(i8* ";
-		if ( this.isThis == true ) {
-			this.buffer = this.buffer + "%this";
-			this.isThis = false;
-		} else {
-			this.buffer = this.buffer + retReg;
-		}
+		this.buffer = this.buffer + retReg;
+
 		String[] argsCalled = null;
 		if (argList != null)
 			argsCalled = argList.split(",");
@@ -448,9 +503,11 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 			if (argsCalled != null)
 				this.buffer = this.buffer + ", " + typeJavaToLLVM(argsSignature[j]) + " " + argsCalled[j];
 		}
+		
 		this.buffer = this.buffer + ")\n";
 		if (meth.type.equals("boolean"))
 			this.isBoolean = true;
+		this.allocExprIdentifier = meth.type;
 		return "%_" + (this.registerCounter - 1);
 	}
 
@@ -508,8 +565,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 	public String visit(Identifier n, String argu) {
 		//this.buffer = this.buffer + "\n\t; Identifier\n";
 		//System.out.println("in Identifier");
-		//this.allocExprIdentifier = "";
-		//this.allocExprIdentifier = n.f0.toString();
+		this.allocExprIdentifier = n.f0.toString();
 		if (argu == "load_var") {
 			String id = n.f0.toString();
 			Variable varr = this.currentMethod.getVar(id);
@@ -523,7 +579,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 				if ( varr.type.equals("boolean") )
 					this.isBoolean = true;
 				//get value from vtable
-				this.buffer = this.buffer + "\t%_" + this.registerCounter + " = getelementptr i8, i8* %this, i32 " + varr.offset + "\n";
+				this.buffer = this.buffer + "\t%_" + this.registerCounter + " = getelementptr i8, i8* %this, i32 " + (varr.offset + 8) + "\n";
 				this.registerCounter += 1;
 				//cast it to its type
 				this.buffer = this.buffer + "\t%_" + this.registerCounter + " = bitcast i8* %_" + (this.registerCounter - 1) + " to " + typeJavaToLLVM(varr.type) + "*\n";
@@ -544,7 +600,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 				if ( varr.type.equals("boolean") )
 					this.isBoolean = true;
 				//get value from vtable
-				this.buffer = this.buffer + "\t%_" + this.registerCounter + " = getelementptr i8, i8* %this, i32 " + varr.offset + "\n";
+				this.buffer = this.buffer + "\t%_" + this.registerCounter + " = getelementptr i8, i8* %this, i32 " + (varr.offset + 8) + "\n";
 				this.registerCounter += 1;
 				//cast it to its type
 				this.buffer = this.buffer + "\t%_" + this.registerCounter + " = bitcast i8* %_" + (this.registerCounter - 1) + " to " + typeJavaToLLVM(varr.type) + "*\n";
@@ -556,8 +612,6 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 	}
 
 	public String visit(ThisExpression n, String argu) {
-		//this.buffer = this.buffer + "\n\t; ThisExpression\n";
-		this.isThis = true;
 		this.allocExprIdentifier = "";
 		this.allocExprIdentifier = this.currentClass.name;
 		return "%this";
@@ -565,6 +619,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 
 	/** * f0 -> "new" * f1 -> "int" * f2 -> "[" * f3 -> Expression() * f4 -> "]" */
 	public String visit(ArrayAllocationExpression n, String argu) {
+		// System.out.println("in ArrayAlloc");
 		//this.buffer = this.buffer + "\n\t; arrallocexpr\n";
 		String exprReg = n.f3.accept(this, argu);
 		if (!exprReg.startsWith("%") && !isNumeric(exprReg)) {
@@ -573,7 +628,19 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 			exprReg = "%_" + this.registerCounter;
 			this.registerCounter += 1;
 		}
-		this.registerCounter += 3;
+
+		this.allocLabelCounter += 2;
+		int alloc_lbl1 = this.allocLabelCounter - 2;
+		int alloc_lbl2 = this.allocLabelCounter - 1;
+
+		this.registerCounter += 4;
+		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 4) + " = icmp slt i32 " + exprReg + ", 0\n";
+        this.buffer = this.buffer + "\tbr i1 %_"+ (this.registerCounter - 4) + ", label %arr_alloc"+ alloc_lbl1 + ", label %arr_alloc" + alloc_lbl2 + "\n";
+		this.buffer = this.buffer + "arr_alloc" + alloc_lbl1 + ":\n";
+		this.buffer = this.buffer + "\tcall void @throw_oob()\n";
+		this.buffer = this.buffer + "\tbr label %arr_alloc" + alloc_lbl2 + "\n";
+		this.buffer = this.buffer + "arr_alloc" + alloc_lbl2 + ":\n";		
+
 		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 3) + " = add i32 " + exprReg + ", 1\n";
 		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 2) + " = call i8* @calloc(i32 4, i32 %_" + (this.registerCounter - 3) + ")\n";
 		this.buffer = this.buffer + "\t%_" + (this.registerCounter - 1) + " = bitcast i8* %_" + (this.registerCounter - 2) + " to i32*\n";
